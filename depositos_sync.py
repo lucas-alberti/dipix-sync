@@ -238,7 +238,7 @@ def procesar_excel(path: Path) -> pd.DataFrame:
     else:
         print("   ADVERTENCIA: sin columna de fecha de ingreso; se procesan todas las filas.")
 
-    resumen["updated_at"] = datetime.now(timezone.utc).isoformat()
+    resumen["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
     return resumen[["reserva_id", "hotel", "total", "pagado", "saldo", "updated_at"]]
 
 
