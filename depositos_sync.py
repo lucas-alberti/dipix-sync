@@ -238,7 +238,8 @@ def procesar_excel(path: Path) -> pd.DataFrame:
     else:
         print("   ADVERTENCIA: sin columna de fecha de ingreso; se procesan todas las filas.")
 
-    resumen["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+    _now = datetime.now(timezone.utc)
+    resumen["updated_at"] = _now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{_now.microsecond // 1000:03d}+00:00"
     return resumen[["reserva_id", "hotel", "total", "pagado", "saldo", "updated_at"]]
 
 
@@ -254,7 +255,9 @@ def upsert_supabase(df: pd.DataFrame) -> None:
                     continue
             except (TypeError, ValueError):
                 pass
-            if hasattr(v, "isoformat"):
+            if k == "updated_at":
+                pass  # ya viene formateado como string con ms precisión
+            elif hasattr(v, "isoformat"):
                 r[k] = v.isoformat()
             elif hasattr(v, "item"):
                 r[k] = v.item()
