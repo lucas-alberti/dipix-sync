@@ -30,8 +30,11 @@ DIPIX_URL    = "http://52.23.89.2:8080/hoteles/servlet/hlogon"
 DIPIX_USER   = os.environ.get("DIPIX_USER", "")
 DIPIX_PASS   = os.environ.get("DIPIX_PASS", "")
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://wlaaflgidjxmgvoaoyvd.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+SYNC_ENDPOINT = os.environ.get(
+    "SYNC_ENDPOINT",
+    "https://project--339234fe-cd36-4683-be64-6295a9023bbb.lovable.app/api/public/sync-balances",
+)
+CRON_SECRET = os.environ.get("CRON_SECRET", "")
 
 DOWNLOAD_DIR = Path(tempfile.mkdtemp())
 SCREENSHOTS_DIR = Path("screenshots_debug")
@@ -239,9 +242,9 @@ def procesar_excel(path: Path) -> pd.DataFrame:
     return resumen[["reserva_id", "hotel", "total", "pagado", "saldo", "updated_at"]]
 
 
-# ── Paso 7: Upsert en Supabase ────────────────────────────────────────────────
+# ── Paso 7: POST al endpoint de Lovable ──────────────────────────────────────
 def upsert_supabase(df: pd.DataFrame) -> None:
-    print("→ Preparando registros para Supabase...")
+    print("→ Preparando registros...")
     records = df.to_dict(orient="records")
     for r in records:
         for k, v in list(r.items()):
@@ -253,44 +256,33 @@ def upsert_supabase(df: pd.DataFrame) -> None:
                 pass
             if hasattr(v, "isoformat"):
                 r[k] = v.isoformat()
-            elif hasattr(v, "item"):          # numpy scalar → python nativo
+            elif hasattr(v, "item"):
                 r[k] = v.item()
 
     headers = {
-        "apikey":        SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Authorization": f"Bearer {CRON_SECRET}",
         "Content-Type":  "application/json",
-        "Prefer":        "resolution=merge-duplicates,return=representation",
     }
 
-    # Verificar conectividad antes del upsert
-    print(f"→ SUPABASE_URL: {SUPABASE_URL}")
-    print(f"→ SUPABASE_KEY (primeros 20 chars): {SUPABASE_KEY[:20]}...")
-
-    print(f"→ Upsert de {len(records)} registros en 'reservation_balances'...")
+    print(f"→ Enviando {len(records)} registros a {SYNC_ENDPOINT}...")
     with httpx.Client(timeout=60) as client:
-        resp = client.post(
-            f"{SUPABASE_URL}/rest/v1/reservation_balances",
-            headers=headers,
-            json=records,
-        )
+        resp = client.post(SYNC_ENDPOINT, headers=headers, json=records)
 
     print(f"→ HTTP status: {resp.status_code}")
-    print(f"→ Response headers: {dict(resp.headers)}")
-    print(f"→ Response body (primeros 500 chars): {resp.text[:500]}")
+    print(f"→ Response: {resp.text[:500]}")
 
     if resp.status_code not in (200, 201):
-        raise RuntimeError(f"Supabase error {resp.status_code}: {resp.text[:500]}")
+        raise RuntimeError(f"Error {resp.status_code}: {resp.text[:500]}")
 
-    print(f"✓ Upsert completado: {len(records)} registros sincronizados")
+    print(f"✓ Sync completado: {len(records)} registros enviados")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 async def main(headless: bool, debug: bool, browser: str) -> None:
     if not DIPIX_USER or not DIPIX_PASS:
         raise ValueError("Faltan credenciales: definí DIPIX_USER y DIPIX_PASS como variables de entorno.")
-    if not SUPABASE_KEY:
-        raise ValueError("Falta SUPABASE_KEY como variable de entorno.")
+    if not CRON_SECRET:
+        raise ValueError("Falta CRON_SECRET como variable de entorno.")
 
     excel_path = await descargar_excel(headless=headless, debug=debug, browser=browser)
     df         = procesar_excel(excel_path)

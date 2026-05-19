@@ -30,6 +30,5 @@ jobs:
         env:
           DIPIX_USER: ${{ secrets.DIPIX_USER }}
           DIPIX_PASS: ${{ secrets.DIPIX_PASS }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: python depositos_sync.py --headless
