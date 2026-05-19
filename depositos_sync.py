@@ -264,6 +264,10 @@ def upsert_supabase(df: pd.DataFrame) -> None:
         "Content-Type":  "application/json",
     }
 
+    auth_header = headers["Authorization"]
+    print(f"→ Authorization header: '{auth_header[:30]}...' (len={len(auth_header)})")
+    print(f"→ CRON_SECRET len: {len(CRON_SECRET)}, repr: {repr(CRON_SECRET[:35])}")
+
     print(f"→ Enviando {len(records)} registros a {SYNC_ENDPOINT}...")
     with httpx.Client(timeout=60) as client:
         resp = client.post(SYNC_ENDPOINT, headers=headers, json=records)
