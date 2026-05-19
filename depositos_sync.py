@@ -263,6 +263,10 @@ def upsert_supabase(df: pd.DataFrame) -> None:
         "Prefer":        "resolution=merge-duplicates,return=representation",
     }
 
+    # Verificar conectividad antes del upsert
+    print(f"→ SUPABASE_URL: {SUPABASE_URL}")
+    print(f"→ SUPABASE_KEY (primeros 20 chars): {SUPABASE_KEY[:20]}...")
+
     print(f"→ Upsert de {len(records)} registros en 'reservation_balances'...")
     with httpx.Client(timeout=60) as client:
         resp = client.post(
@@ -270,8 +274,13 @@ def upsert_supabase(df: pd.DataFrame) -> None:
             headers=headers,
             json=records,
         )
-        if resp.status_code not in (200, 201):
-            raise RuntimeError(f"Supabase error {resp.status_code}: {resp.text[:300]}")
+
+    print(f"→ HTTP status: {resp.status_code}")
+    print(f"→ Response headers: {dict(resp.headers)}")
+    print(f"→ Response body (primeros 500 chars): {resp.text[:500]}")
+
+    if resp.status_code not in (200, 201):
+        raise RuntimeError(f"Supabase error {resp.status_code}: {resp.text[:500]}")
 
     print(f"✓ Upsert completado: {len(records)} registros sincronizados")
 
