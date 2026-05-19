@@ -18,7 +18,7 @@ import argparse
 import asyncio
 import os
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -238,7 +238,7 @@ def procesar_excel(path: Path) -> pd.DataFrame:
     else:
         print("   ADVERTENCIA: sin columna de fecha de ingreso; se procesan todas las filas.")
 
-    resumen["updated_at"] = datetime.utcnow().isoformat()
+    resumen["updated_at"] = datetime.now(timezone.utc).isoformat()
     return resumen[["reserva_id", "hotel", "total", "pagado", "saldo", "updated_at"]]
 
 
